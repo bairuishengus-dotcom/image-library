@@ -1,42 +1,37 @@
-# Company Image Library
+# Image Library V2（index.json 版）
 
-这是一个可以部署到 GitHub Pages 的腾讯云 COS 文件浏览网页。
+此版本不再调用腾讯云 COS 的匿名 ListBucket 接口，因此不会再出现 403 列目录错误。
 
-## 已填写的 COS 信息
+## 上传到 GitHub
 
-- Bucket：`hhhhhr-1454825981`
-- Region：`ap-guangzhou`
-- 网站地址：`https://bairuishengus-dotcom.github.io/image-library/`
+把以下文件覆盖上传到仓库根目录：
 
-## 上传方法
+- index.html
+- style.css
+- app.js
+- config.js
+- index.json
 
-把下面 4 个文件上传到 GitHub 仓库根目录：
+`generate-index.html` 是本地生成目录工具，可一起上传，也可只保存在电脑上。
 
-- `index.html`
-- `style.css`
-- `app.js`
-- `config.js`
+## 重要说明
 
-## 腾讯云 COS 必须设置
+当前 `index.json` 已创建 4 个目录：
 
-### 1. 公有读
+- 24
+- 27
+- 33
+- hc08
 
-存储桶需允许匿名读取和列出文件，否则网页无法浏览目录。
+但因为我无法看到你 COS 里的具体文件名，所以这些目录暂时是空的。
 
-### 2. CORS
+## 生成完整 index.json
 
-进入：
+1. 双击打开 `generate-index.html`
+2. 点击选择文件夹
+3. 选择你电脑上包含 24、27、33、hc08 的总文件夹
+4. 点击“下载 index.json”
+5. 用新生成的 index.json 覆盖 GitHub 仓库中的旧文件
+6. 等 GitHub Pages 更新后刷新网页
 
-`COS 控制台 → 安全管理 → 跨域访问 CORS`
-
-添加规则：
-
-- 来源 Origin：`https://bairuishengus-dotcom.github.io`
-- 允许方法：`GET`、`HEAD`
-- 允许 Headers：`*`
-- 暴露 Headers：`ETag`、`Content-Length`
-- 缓存时间：`600`
-
-## 修改标题或 Bucket
-
-编辑 `config.js`。
+工具不会上传你的图片，只读取文件夹和文件名。

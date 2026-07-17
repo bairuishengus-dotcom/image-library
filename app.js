@@ -2,234 +2,149 @@
 (() => {
   const cfg = window.IMAGE_LIBRARY_CONFIG;
   const endpoint = `https://${cfg.bucket}.cos.${cfg.region}.myqcloud.com`;
-  let currentPrefix = normalizePrefix(cfg.rootPrefix || "");
-  let items = [];
+  let manifest = { folders: {} };
+  let pathParts = [];
 
+  const $ = (s) => document.querySelector(s);
   const el = {
-    title: document.querySelector("#siteTitle"),
-    grid: document.querySelector("#grid"),
-    status: document.querySelector("#status"),
-    back: document.querySelector("#backBtn"),
-    crumbs: document.querySelector("#breadcrumbs"),
-    search: document.querySelector("#searchInput"),
-    refresh: document.querySelector("#refreshBtn"),
-    dialog: document.querySelector("#previewDialog"),
-    previewImage: document.querySelector("#previewImage"),
-    previewName: document.querySelector("#previewName"),
-    openOriginal: document.querySelector("#openOriginal"),
-    downloadFile: document.querySelector("#downloadFile"),
-    copyLink: document.querySelector("#copyLink"),
-    closeDialog: document.querySelector("#closeDialog")
+    title: $("#siteTitle"), grid: $("#grid"), status: $("#status"),
+    back: $("#backBtn"), crumbs: $("#breadcrumbs"), search: $("#searchInput"),
+    refresh: $("#refreshBtn"), dialog: $("#previewDialog"),
+    previewImage: $("#previewImage"), previewName: $("#previewName"),
+    openOriginal: $("#openOriginal"), downloadFile: $("#downloadFile"),
+    copyLink: $("#copyLink"), closeDialog: $("#closeDialog")
   };
 
-  el.title.textContent = cfg.siteTitle || "Image Library";
-  document.title = cfg.siteTitle || "Image Library";
+  el.title.textContent = cfg.siteTitle;
+  document.title = cfg.siteTitle;
 
-  function normalizePrefix(value) {
-    if (!value) return "";
-    return value.replace(/^\/+/, "").replace(/\/?$/, "/");
+  const esc = (v) => String(v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const isImage = (name) => /\.(avif|bmp|gif|jpe?g|png|svg|webp)$/i.test(name);
+  const encodeKey = (key) => key.split("/").map(encodeURIComponent).join("/");
+  const objectUrl = (key) => `${endpoint}/${encodeKey(key)}`;
+
+  function currentNode() {
+    let node = manifest;
+    for (const part of pathParts) node = node.folders[part];
+    return node;
   }
 
-  function encodeObjectKey(key) {
-    return key.split("/").map(encodeURIComponent).join("/");
-  }
-
-  function objectUrl(key) {
-    return `${endpoint}/${encodeObjectKey(key)}`;
-  }
-
-  function isImage(key) {
-    return /\.(avif|bmp|gif|jpe?g|png|svg|webp)$/i.test(key);
-  }
-
-  function formatBytes(bytes) {
-    const value = Number(bytes || 0);
-    if (!value) return "";
-    const units = ["B", "KB", "MB", "GB"];
-    const index = Math.min(Math.floor(Math.log(value) / Math.log(1024)), units.length - 1);
-    return `${(value / 1024 ** index).toFixed(index ? 1 : 0)} ${units[index]}`;
-  }
-
-  function escapeHtml(text) {
-    return String(text).replace(/[&<>"']/g, ch => ({
-      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
-    })[ch]);
-  }
-
-  async function listObjects(prefix) {
-    const params = new URLSearchParams({
-      "list-type": "2",
-      "delimiter": "/",
-      "prefix": prefix,
-      "max-keys": String(cfg.maxKeys || 1000)
-    });
-    const response = await fetch(`${endpoint}/?${params.toString()}`);
-    if (!response.ok) {
-      throw new Error(`COS 返回 ${response.status}。请检查“公有读权限”和 CORS 设置。`);
-    }
-    const text = await response.text();
-    const xml = new DOMParser().parseFromString(text, "application/xml");
-    const error = xml.querySelector("Error > Message");
-    if (error) throw new Error(error.textContent);
-
-    const folders = [...xml.querySelectorAll("CommonPrefixes > Prefix")]
-      .map(node => node.textContent)
-      .filter(key => key !== prefix)
-      .map(key => ({
-        type: "folder",
-        key,
-        name: key.slice(prefix.length).replace(/\/$/, "")
-      }));
-
-    const files = [...xml.querySelectorAll("Contents")]
-      .map(node => ({
-        type: "file",
-        key: node.querySelector("Key")?.textContent || "",
-        size: node.querySelector("Size")?.textContent || "0",
-        modified: node.querySelector("LastModified")?.textContent || ""
-      }))
-      .filter(file => file.key && file.key !== prefix && !file.key.endsWith("/"))
-      .map(file => ({
-        ...file,
-        name: file.key.slice(prefix.length)
-      }));
-
-    return [...folders, ...files];
-  }
-
-  async function load(prefix = currentPrefix) {
-    currentPrefix = normalizePrefix(prefix);
+  async function loadManifest() {
     el.status.className = "status";
-    el.status.textContent = "正在读取目录…";
-    el.grid.innerHTML = "";
-    el.search.value = "";
-    renderBreadcrumbs();
-
+    el.status.textContent = "正在加载目录…";
     try {
-      items = await listObjects(currentPrefix);
-      render(items);
-      el.status.textContent = `当前目录共 ${items.length} 项`;
-    } catch (error) {
-      console.error(error);
-      items = [];
+      const res = await fetch(`${cfg.manifestFile}?t=${Date.now()}`);
+      if (!res.ok) throw new Error(`无法读取 ${cfg.manifestFile}`);
+      manifest = await res.json();
+      render();
+    } catch (err) {
       el.status.className = "status error";
-      el.status.innerHTML =
-        `${escapeHtml(error.message)}<br><br>` +
-        `请在腾讯云 COS 中确认：<strong>存储桶允许公有读</strong>，并在“安全管理 → 跨域访问 CORS”允许来源 ` +
-        `<code>https://bairuishengus-dotcom.github.io</code>，允许方法 GET、HEAD。`;
-      el.grid.innerHTML = `<div class="empty">暂时无法读取文件。</div>`;
+      el.status.textContent = `${err.message}。请确认 index.json 已上传到 GitHub 仓库根目录。`;
+      el.grid.innerHTML = `<div class="empty">目录文件加载失败。</div>`;
     }
   }
 
-  function render(list) {
-    const query = el.search.value.trim().toLowerCase();
-    const filtered = query
-      ? list.filter(item => item.name.toLowerCase().includes(query))
-      : list;
+  function render() {
+    const node = currentNode();
+    const q = el.search.value.trim().toLowerCase();
+    const folders = Object.entries(node.folders || {})
+      .map(([name, value]) => ({type:"folder", name, count:countFiles(value)}))
+      .filter(x => x.name.toLowerCase().includes(q));
+    const files = (node.files || [])
+      .map(x => typeof x === "string" ? {name:x, key:buildKey(x)} : x)
+      .filter(x => x.name.toLowerCase().includes(q));
 
-    if (!filtered.length) {
-      el.grid.innerHTML = `<div class="empty">${query ? "没有匹配的文件" : "这个目录是空的"}</div>`;
-      return;
-    }
+    renderBreadcrumbs();
+    el.status.className = "status";
+    el.status.textContent = `当前目录：${folders.length} 个文件夹，${files.length} 个文件`;
 
-    el.grid.innerHTML = filtered.map(item => {
-      if (item.type === "folder") {
-        return `
-          <article class="card">
-            <button class="card-main" data-folder="${escapeHtml(item.key)}">
-              <div class="thumb"><span class="folder-icon">📁</span></div>
-              <div class="card-info">
-                <div class="card-name" title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</div>
-                <div class="card-meta">文件夹</div>
-              </div>
-            </button>
-          </article>`;
-      }
-
-      const url = objectUrl(item.key);
-      const preview = isImage(item.key)
-        ? `<img loading="lazy" src="${url}" alt="${escapeHtml(item.name)}"
-             onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'file-icon',textContent:'🖼️'}))">`
-        : `<span class="file-icon">📄</span>`;
-
-      return `
+    const items = [
+      ...folders.map(item => `
         <article class="card">
-          <button class="card-main" data-file="${escapeHtml(item.key)}">
-            <div class="thumb">${preview}</div>
+          <button class="card-main" data-folder="${esc(item.name)}">
+            <div class="thumb"><span class="folder-icon">📁</span></div>
             <div class="card-info">
-              <div class="card-name" title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</div>
-              <div class="card-meta">${formatBytes(item.size)}</div>
+              <div class="card-name">${esc(item.name)}</div>
+              <div class="card-meta">${item.count} 个文件</div>
             </div>
           </button>
-          <div class="card-actions">
-            <a href="${url}" target="_blank" rel="noopener">打开</a>
-            <a href="${url}" download>下载</a>
-          </div>
-        </article>`;
-    }).join("");
+        </article>`),
+      ...files.map(item => {
+        const key = item.key || buildKey(item.name);
+        const url = objectUrl(key);
+        const thumb = isImage(item.name)
+          ? `<img loading="lazy" src="${url}" alt="${esc(item.name)}">`
+          : `<span class="file-icon">📄</span>`;
+        return `
+          <article class="card">
+            <button class="card-main" data-file="${esc(key)}" data-name="${esc(item.name)}">
+              <div class="thumb">${thumb}</div>
+              <div class="card-info"><div class="card-name">${esc(item.name)}</div></div>
+            </button>
+            <div class="card-actions">
+              <a href="${url}" target="_blank" rel="noopener">打开</a>
+              <a href="${url}" download>下载</a>
+            </div>
+          </article>`;
+      })
+    ];
 
-    el.grid.querySelectorAll("[data-folder]").forEach(button => {
-      button.addEventListener("click", () => load(button.dataset.folder));
+    el.grid.innerHTML = items.length ? items.join("") : `<div class="empty">这个目录是空的</div>`;
+
+    el.grid.querySelectorAll("[data-folder]").forEach(btn => {
+      btn.onclick = () => { pathParts.push(btn.dataset.folder); el.search.value = ""; render(); };
     });
-    el.grid.querySelectorAll("[data-file]").forEach(button => {
-      button.addEventListener("click", () => openPreview(button.dataset.file));
+    el.grid.querySelectorAll("[data-file]").forEach(btn => {
+      btn.onclick = () => openPreview(btn.dataset.file, btn.dataset.name);
     });
+  }
+
+  function buildKey(filename) {
+    return [...pathParts, filename].join("/");
+  }
+
+  function countFiles(node) {
+    let total = (node.files || []).length;
+    for (const child of Object.values(node.folders || {})) total += countFiles(child);
+    return total;
   }
 
   function renderBreadcrumbs() {
-    const root = normalizePrefix(cfg.rootPrefix || "");
-    const relative = currentPrefix.slice(root.length).replace(/\/$/, "");
-    const parts = relative ? relative.split("/") : [];
-    const crumbs = [{ name: "首页", prefix: root }];
-    let build = root;
-    for (const part of parts) {
-      build += `${part}/`;
-      crumbs.push({ name: part, prefix: build });
-    }
-
-    el.crumbs.innerHTML = crumbs.map((crumb, index) =>
-      index === crumbs.length - 1
-        ? `<span>${escapeHtml(crumb.name)}</span>`
-        : `<button data-prefix="${escapeHtml(crumb.prefix)}">${escapeHtml(crumb.name)}</button> <span>/</span>`
+    const crumbs = [{name:"首页", index:-1}, ...pathParts.map((name,index)=>({name,index}))];
+    el.crumbs.innerHTML = crumbs.map((c,i) =>
+      i === crumbs.length-1
+        ? `<span>${esc(c.name)}</span>`
+        : `<button data-index="${c.index}">${esc(c.name)}</button> <span>/</span>`
     ).join(" ");
-
-    el.crumbs.querySelectorAll("[data-prefix]").forEach(button => {
-      button.addEventListener("click", () => load(button.dataset.prefix));
+    el.crumbs.querySelectorAll("button").forEach(btn => {
+      btn.onclick = () => {
+        const idx = Number(btn.dataset.index);
+        pathParts = idx < 0 ? [] : pathParts.slice(0, idx + 1);
+        el.search.value = "";
+        render();
+      };
     });
-    el.back.disabled = currentPrefix === root;
+    el.back.disabled = pathParts.length === 0;
   }
 
-  function parentPrefix() {
-    const root = normalizePrefix(cfg.rootPrefix || "");
-    if (currentPrefix === root) return root;
-    const relative = currentPrefix.slice(root.length).replace(/\/$/, "");
-    const parts = relative.split("/");
-    parts.pop();
-    return root + (parts.length ? `${parts.join("/")}/` : "");
-  }
-
-  function openPreview(key) {
-    const name = key.split("/").pop();
+  function openPreview(key, name) {
     const url = objectUrl(key);
     el.previewName.textContent = name;
     el.openOriginal.href = url;
     el.downloadFile.href = url;
-    el.downloadFile.setAttribute("download", name);
-
-    if (isImage(key)) {
+    el.downloadFile.download = name;
+    if (isImage(name)) {
       el.previewImage.src = url;
-      el.previewImage.alt = name;
       el.previewImage.style.display = "";
     } else {
       el.previewImage.removeAttribute("src");
       el.previewImage.style.display = "none";
     }
-
     el.copyLink.onclick = async () => {
       try {
         await navigator.clipboard.writeText(url);
         el.copyLink.textContent = "已复制";
-        setTimeout(() => el.copyLink.textContent = "复制链接", 1200);
+        setTimeout(()=>el.copyLink.textContent="复制链接",1200);
       } catch {
         prompt("复制下面的链接：", url);
       }
@@ -237,13 +152,11 @@
     el.dialog.showModal();
   }
 
-  el.search.addEventListener("input", () => render(items));
-  el.refresh.addEventListener("click", () => load(currentPrefix));
-  el.back.addEventListener("click", () => load(parentPrefix()));
-  el.closeDialog.addEventListener("click", () => el.dialog.close());
-  el.dialog.addEventListener("click", event => {
-    if (event.target === el.dialog) el.dialog.close();
-  });
+  el.search.oninput = render;
+  el.refresh.onclick = loadManifest;
+  el.back.onclick = () => { pathParts.pop(); el.search.value = ""; render(); };
+  el.closeDialog.onclick = () => el.dialog.close();
+  el.dialog.onclick = e => { if (e.target === el.dialog) el.dialog.close(); };
 
-  load();
+  loadManifest();
 })();

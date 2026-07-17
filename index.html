@@ -3,39 +3,38 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="description" content="Company image library powered by Tencent COS" />
-  <title>Image Library</title>
+  <title>Company Image Library</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <header class="topbar">
     <div>
-      <h1 id="siteTitle">Image Library</h1>
-      <p class="subtitle">浏览、预览和下载腾讯云 COS 文件</p>
+      <h1 id="siteTitle">Company Image Library</h1>
+      <p>浏览、预览和下载腾讯云 COS 文件</p>
     </div>
-    <button id="refreshBtn" class="secondary">刷新</button>
+    <button id="refreshBtn">刷新</button>
   </header>
 
   <main class="container">
     <section class="toolbar">
-      <button id="backBtn" class="secondary" disabled>← 返回上一级</button>
-      <nav id="breadcrumbs" class="breadcrumbs"></nav>
+      <button id="backBtn" disabled>← 返回上一级</button>
+      <nav id="breadcrumbs"></nav>
       <input id="searchInput" type="search" placeholder="搜索当前目录…" />
     </section>
 
-    <section id="status" class="status">正在连接腾讯云 COS…</section>
-    <section id="grid" class="grid" aria-live="polite"></section>
+    <section id="status" class="status">正在加载目录…</section>
+    <section id="grid" class="grid"></section>
   </main>
 
-  <dialog id="previewDialog" class="preview-dialog">
-    <button id="closeDialog" class="close-btn" aria-label="关闭">×</button>
-    <div class="preview-body">
+  <dialog id="previewDialog">
+    <button id="closeDialog" class="close-btn">×</button>
+    <div class="preview-wrap">
       <img id="previewImage" alt="" />
       <div class="preview-info">
         <h2 id="previewName"></h2>
-        <div class="preview-actions">
-          <a id="openOriginal" class="button-link" target="_blank" rel="noopener">打开原文件</a>
-          <a id="downloadFile" class="button-link" download>下载</a>
+        <div class="actions">
+          <a id="openOriginal" target="_blank" rel="noopener">打开原文件</a>
+          <a id="downloadFile" download>下载</a>
           <button id="copyLink">复制链接</button>
         </div>
       </div>

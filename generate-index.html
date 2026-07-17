@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>生成 index.json</title>
+<style>
+body{font-family:system-ui;margin:40px;max-width:820px}button{padding:12px 18px;font-size:16px}
+pre{background:#f4f6f8;padding:16px;border-radius:10px;white-space:pre-wrap}
+</style>
+</head>
+<body>
+<h1>生成 index.json</h1>
+<p>选择你电脑上与 COS 相同结构的总文件夹。工具只读取文件名和文件夹名，不会上传任何文件。</p>
+<input id="picker" type="file" webkitdirectory multiple>
+<p><button id="download" disabled>下载 index.json</button></p>
+<pre id="status">等待选择文件夹…</pre>
+<script>
+let manifest=null;
+document.querySelector("#picker").addEventListener("change", e=>{
+  const root={folders:{},files:[]};
+  for(const file of e.target.files){
+    const parts=file.webkitRelativePath.split("/");
+    parts.shift();
+    if(!parts.length) continue;
+    const name=parts.pop();
+    let node=root;
+    for(const part of parts){
+      node.folders[part] ??={folders:{},files:[]};
+      node=node.folders[part];
+    }
+    node.files.push(name);
+  }
+  const sortNode=n=>{
+    n.files.sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}));
+    n.folders=Object.fromEntries(Object.entries(n.folders).sort((a,b)=>a[0].localeCompare(b[0],undefined,{numeric:true})));
+    Object.values(n.folders).forEach(sortNode);
+  };
+  sortNode(root);
+  manifest=root;
+  document.querySelector("#status").textContent=`已读取 ${e.target.files.length} 个文件。`;
+  document.querySelector("#download").disabled=false;
+});
+document.querySelector("#download").addEventListener("click",()=>{
+  const blob=new Blob([JSON.stringify(manifest,null,2)],{type:"application/json"});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);a.download="index.json";a.click();
+  URL.revokeObjectURL(a.href);
+});
+</script>
+</body>
+</html>
