@@ -1,13 +1,14 @@
-V6 修正版：
-- 强制网站标题为“佰睿昇公司”
-- 副标题改为“企业数字素材中心 · 统一管理、快速查找、便捷分享”
-- 每张图片卡片外部新增“复制链接”
-- “查看”和复制出来的链接使用 inline 参数，尽量在浏览器直接预览
-- “下载”按钮单独使用 attachment 参数
+V7 修复说明：
+1. 删除无签名 response-content-disposition 参数，避免 InvalidRequest。
+2. 新增 viewer.html。
+3. “查看”和“复制链接”现在指向 viewer.html，而不是直接指向 COS。
+4. viewer.html 会在浏览器中显示图片，并把标签页标题设置成图片文件名。
+5. 缩略图继续使用原始 COS 地址。
 
-上传覆盖：
-index.html
-style.css
-app.js
+上传覆盖 GitHub 根目录：
+- index.html
+- style.css
+- app.js
+- viewer.html
 
-config.js 继续保留当前 apiUrl。
+config.js 保持不变。

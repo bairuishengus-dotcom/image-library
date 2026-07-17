@@ -19,13 +19,8 @@
   const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const isImage=n=>/\.(avif|bmp|gif|jpe?g|png|svg|webp)$/i.test(n||"");
   const rawUrl=k=>`${endpoint}/${k.split("/").map(encodeURIComponent).join("/")}`;
-  const inlineUrl=k=>{
-    const base=rawUrl(k);
-    const ext=(k.split(".").pop()||"jpg").toLowerCase();
-    const mime=ext==="png"?"image/png":ext==="webp"?"image/webp":ext==="gif"?"image/gif":"image/jpeg";
-    return `${base}?response-content-disposition=inline&response-content-type=${encodeURIComponent(mime)}`;
-  };
-  const downloadUrl=k=>`${rawUrl(k)}?response-content-disposition=attachment`;
+  const viewerUrl=(key,name)=>`${location.origin}${location.pathname.replace(/[^/]*$/,"")}viewer.html?key=${encodeURIComponent(key)}&name=${encodeURIComponent(name)}`;
+  const downloadUrl=k=>rawUrl(k);
 
   function node(){let n=tree;for(const p of parts)n=n.folders[p];return n}
   function count(n){let t=(n.files||[]).length;for(const c of Object.values(n.folders||{}))t+=count(c);return t}
@@ -62,16 +57,16 @@
     requestAnimationFrame(()=>[...el.grid.querySelectorAll(".card")].forEach((c,i)=>setTimeout(()=>c.classList.add("show"),Math.min(i*30,300))));
   }
   function fileCard(x){
-    const preview=inlineUrl(x.key),download=downloadUrl(x.key);
+    const raw=rawUrl(x.key),view=viewerUrl(x.key,x.name);
     return `<article class="card">
       <button class="card-main" data-file="${esc(x.key)}" data-name="${esc(x.name)}">
-        <div class="thumb">${isImage(x.name)?`<img loading="lazy" src="${preview}" alt="${esc(x.name)}">`:"📄"}</div>
+        <div class="thumb">${isImage(x.name)?`<img loading="lazy" src="${raw}" alt="${esc(x.name)}">`:"📄"}</div>
         <div class="card-body"><div class="name">${esc(x.name)}</div><div class="meta">${bytes(x.size)}</div></div>
       </button>
       <div class="card-actions">
-        <a href="${preview}" target="_blank" rel="noopener">查看</a>
-        <a href="${download}">下载</a>
-        <button data-copy="${esc(preview)}">复制链接</button>
+        <a href="${view}" target="_blank" rel="noopener">查看</a>
+        <a href="${raw}" download>下载</a>
+        <button data-copy="${esc(view)}">复制链接</button>
       </div>
     </article>`;
   }
@@ -91,8 +86,8 @@
     catch{prompt("复制下面的链接：",url)}
   }
   function preview(key,name){
-    const p=inlineUrl(key),d=downloadUrl(key);
-    el.pname.textContent=name;el.ppath.textContent=key;el.pimg.src=p;el.open.href=p;el.download.href=d;el.copy.onclick=()=>copy(p,el.copy);el.dialog.showModal();
+    const raw=rawUrl(key),view=viewerUrl(key,name);
+    el.pname.textContent=name;el.ppath.textContent=key;el.pimg.src=raw;el.open.href=view;el.download.href=raw;el.download.setAttribute("download",name);el.copy.onclick=()=>copy(view,el.copy);el.dialog.showModal();
   }
   el.search.oninput=render;el.refresh.onclick=load;el.back.onclick=()=>{parts.pop();render()};el.close.onclick=()=>el.dialog.close();el.dialog.onclick=e=>{if(e.target===el.dialog)el.dialog.close()};
   load();
