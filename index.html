@@ -4,93 +4,61 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>佰睿昇公司</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=20260717-v5" />
+  <link rel="stylesheet" href="style.css?v=20260717-v6" />
 </head>
 <body>
-  <div class="page-bg"></div>
-
   <header class="hero">
     <div class="hero__inner">
       <div class="hero__center">
-        <div class="eyebrow">BAIRUISHENG RESOURCE CENTER</div>
+        <div class="eyebrow">BAIRUISHENG DIGITAL ASSET CENTER</div>
         <h1 id="siteTitle">佰睿昇公司</h1>
-        <p id="heroDesc">企业视觉素材中心 · 高效浏览、搜索、预览与分享</p>
-
+        <p id="heroDesc">企业数字素材中心 · 统一管理、快速查找、便捷分享</p>
         <div class="hero__stats">
-          <div class="stat-pill">
-            <span class="stat-label">文件夹</span>
-            <strong id="heroFolders">--</strong>
-          </div>
-          <div class="stat-pill">
-            <span class="stat-label">文件</span>
-            <strong id="heroFiles">--</strong>
-          </div>
-          <div class="stat-pill">
-            <span class="stat-label">当前路径</span>
-            <strong id="heroPath">首页</strong>
-          </div>
+          <div class="stat-pill"><span>文件夹</span><strong id="heroFolders">--</strong></div>
+          <div class="stat-pill"><span>文件</span><strong id="heroFiles">--</strong></div>
+          <div class="stat-pill"><span>当前路径</span><strong id="heroPath">首页</strong></div>
         </div>
       </div>
-
-      <button id="refreshBtn" class="btn btn--primary hero__refresh">刷新内容</button>
+      <button id="refreshBtn" class="btn btn-primary">刷新内容</button>
     </div>
   </header>
 
   <main class="shell">
-    <section class="toolbar glass">
-      <div class="toolbar__left">
-        <button id="backBtn" class="btn btn--ghost" disabled>← 返回上一级</button>
-        <nav id="breadcrumbs" class="breadcrumbs"></nav>
+    <section class="toolbar panel">
+      <div class="toolbar-left">
+        <button id="backBtn" class="btn btn-light" disabled>← 返回上一级</button>
+        <nav id="breadcrumbs"></nav>
       </div>
-      <div class="toolbar__right">
-        <label class="search-wrap">
-          <span class="search-icon">⌕</span>
-          <input id="searchInput" type="search" placeholder="搜索当前目录..." />
-        </label>
-      </div>
+      <input id="searchInput" type="search" placeholder="搜索当前目录..." />
     </section>
 
-    <section class="overview grid-3">
-      <div class="metric-card glass">
-        <div class="metric-card__label">当前目录文件夹</div>
-        <div class="metric-card__value" id="metricFolders">0</div>
-      </div>
-      <div class="metric-card glass">
-        <div class="metric-card__label">当前目录文件</div>
-        <div class="metric-card__value" id="metricFiles">0</div>
-      </div>
-      <div class="metric-card glass">
-        <div class="metric-card__label">状态</div>
-        <div class="metric-card__value metric-card__value--small" id="metricStatus">等待加载</div>
-      </div>
+    <section class="summary">
+      <div class="summary-card panel"><span>当前目录文件夹</span><strong id="metricFolders">0</strong></div>
+      <div class="summary-card panel"><span>当前目录文件</span><strong id="metricFiles">0</strong></div>
+      <div class="summary-card panel"><span>状态</span><strong id="metricStatus">等待加载</strong></div>
     </section>
 
-    <section id="status" class="status glass status--loading">正在加载素材目录...</section>
-    <section id="grid" class="content-grid"></section>
+    <section id="status" class="status panel">正在加载素材目录...</section>
+    <section id="grid" class="grid"></section>
   </main>
 
-  <dialog id="previewDialog" class="preview-dialog">
-    <div class="preview-panel">
-      <button id="closeDialog" class="preview-close" aria-label="关闭">×</button>
-      <div class="preview-media"><img id="previewImage" alt="" /></div>
-      <div class="preview-meta">
-        <div class="preview-meta__top">
-          <h2 id="previewName">文件名</h2>
-          <p id="previewPath" class="preview-path"></p>
-        </div>
+  <dialog id="previewDialog">
+    <button id="closeDialog" class="close">×</button>
+    <div class="preview">
+      <img id="previewImage" alt="" />
+      <div class="preview-info">
+        <h2 id="previewName"></h2>
+        <p id="previewPath"></p>
         <div class="preview-actions">
-          <a id="openOriginal" target="_blank" rel="noopener" class="btn btn--primary">打开原文件</a>
-          <a id="downloadFile" download class="btn btn--ghost-dark">下载文件</a>
-          <button id="copyLink" class="btn btn--ghost-dark">复制链接</button>
+          <a id="openOriginal" target="_blank" rel="noopener" class="btn btn-primary">浏览器查看</a>
+          <a id="downloadFile" class="btn btn-light">下载图片</a>
+          <button id="copyLink" class="btn btn-light">复制图片链接</button>
         </div>
       </div>
     </div>
   </dialog>
 
-  <script src="config.js?v=20260717-v5"></script>
-  <script src="app.js?v=20260717-v5"></script>
+  <script src="config.js?v=20260717-v6"></script>
+  <script src="app.js?v=20260717-v6"></script>
 </body>
 </html>
