@@ -17,9 +17,29 @@
 .status{padding:15px 18px;border-radius:18px;margin-bottom:16px;color:#58667b}.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:18px}
 .card{border-radius:22px;overflow:hidden;background:#fff;box-shadow:0 15px 38px rgba(21,32,52,.08);transition:.25s;opacity:0;transform:translateY(16px)}
 .card.show{opacity:1;transform:translateY(0)}.card:hover{transform:translateY(-6px);box-shadow:0 22px 46px rgba(21,32,52,.14)}
-.card-main{width:100%;padding:0;border:0;background:transparent;text-align:left;cursor:pointer}.thumb{height:175px;display:grid;place-items:center;background:linear-gradient(180deg,#f7faff,#edf3fb);overflow:hidden}
-.thumb img{width:100%;height:100%;object-fit:cover;transition:.3s}.card:hover .thumb img{transform:scale(1.04)}.folder{font-size:70px}
-.card-body{padding:14px}.name{font-size:17px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.meta{font-size:13px;color:#7a8799;margin-top:6px}
+.card-main{width:100%;padding:0;border:0;background:transparent;text-align:left;cursor:pointer}
+
+/* 关键修复：任何尺寸、比例的图片都完整显示 */
+.thumb{
+  height:220px;
+  display:grid;
+  place-items:center;
+  background:linear-gradient(180deg,#f7faff,#edf3fb);
+  overflow:hidden;
+  padding:10px;
+}
+.thumb img{
+  width:100%;
+  height:100%;
+  object-fit:contain;
+  object-position:center;
+  display:block;
+  transition:transform .3s;
+  background:#fff;
+}
+.card:hover .thumb img{transform:scale(1.02)}
+
+.folder{font-size:70px}.card-body{padding:14px}.name{font-size:17px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.meta{font-size:13px;color:#7a8799;margin-top:6px}
 .card-actions{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:0 14px 14px}
 .card-actions a,.card-actions button{border:0;text-decoration:none;text-align:center;padding:10px 8px;border-radius:10px;background:#edf4ff;color:#1e4fbf;font-size:12px;font-weight:700;cursor:pointer}
 .card-actions button.done{background:#e7f7ee;color:#197444}.btn{border:0;border-radius:12px;padding:11px 16px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;font:inherit}
@@ -30,3 +50,4 @@ dialog{width:min(1100px,95vw);border:0;padding:0;background:transparent}dialog::
 .close{position:fixed;transform:translate(-44px,12px);width:36px;height:36px;border-radius:50%;border:0;background:rgba(0,0,0,.55);color:#fff;font-size:25px;cursor:pointer}
 .empty{grid-column:1/-1;text-align:center;padding:60px;color:#758197}
 @media(max-width:900px){.toolbar{grid-template-columns:1fr}.summary{grid-template-columns:1fr}.hero__inner,.shell{padding-left:18px;padding-right:18px}#refreshBtn{position:static;margin:20px auto 0;display:flex}.hero h1{font-size:38px}}
+@media(max-width:700px){.thumb{height:180px;padding:8px}}
