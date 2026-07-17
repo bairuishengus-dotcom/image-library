@@ -2,37 +2,68 @@
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Company Image Library</title>
-  <link rel="stylesheet" href="style.css?v=3" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css?v=20260717-v4" />
 </head>
 <body>
-  <header class="topbar">
-    <div><h1 id="siteTitle">Company Image Library</h1><p>实时读取腾讯云 COS 文件</p></div>
-    <button id="refreshBtn">刷新</button>
+  <div class="page-bg"></div>
+  <header class="hero">
+    <div class="hero__inner">
+      <div class="hero__text">
+        <div class="eyebrow">ANNLARY RESOURCE CENTER</div>
+        <h1 id="siteTitle">Company Image Library</h1>
+        <p id="heroDesc">实时读取腾讯云 COS 文件，支持浏览、搜索、预览与下载。</p>
+        <div class="hero__stats">
+          <div class="stat-pill"><span class="stat-label">文件夹</span><strong id="heroFolders">--</strong></div>
+          <div class="stat-pill"><span class="stat-label">文件</span><strong id="heroFiles">--</strong></div>
+          <div class="stat-pill"><span class="stat-label">当前路径</span><strong id="heroPath">首页</strong></div>
+        </div>
+      </div>
+      <div class="hero__actions"><button id="refreshBtn" class="btn btn--primary"><span>刷新内容</span></button></div>
+    </div>
   </header>
-  <main class="container">
-    <section class="toolbar">
-      <button id="backBtn" disabled>← 返回上一级</button>
-      <nav id="breadcrumbs"></nav>
-      <input id="searchInput" type="search" placeholder="搜索当前目录…" />
+
+  <main class="shell">
+    <section class="toolbar glass">
+      <div class="toolbar__left">
+        <button id="backBtn" class="btn btn--ghost" disabled>← 返回上一级</button>
+        <nav id="breadcrumbs" class="breadcrumbs"></nav>
+      </div>
+      <div class="toolbar__right">
+        <label class="search-wrap"><span class="search-icon">⌕</span><input id="searchInput" type="search" placeholder="搜索当前目录..." /></label>
+      </div>
     </section>
-    <section id="status" class="status">正在读取 COS…</section>
-    <section id="grid" class="grid"></section>
+
+    <section class="overview grid-3">
+      <div class="metric-card glass"><div class="metric-card__label">当前目录文件夹</div><div class="metric-card__value" id="metricFolders">0</div></div>
+      <div class="metric-card glass"><div class="metric-card__label">当前目录文件</div><div class="metric-card__value" id="metricFiles">0</div></div>
+      <div class="metric-card glass"><div class="metric-card__label">状态</div><div class="metric-card__value metric-card__value--small" id="metricStatus">等待加载</div></div>
+    </section>
+
+    <section id="status" class="status glass status--loading">正在加载实时目录数据...</section>
+    <section id="grid" class="content-grid"></section>
   </main>
-  <dialog id="previewDialog">
-    <button id="closeDialog" class="close-btn">×</button>
-    <div class="preview-wrap">
-      <img id="previewImage" alt="" />
-      <div class="preview-info"><h2 id="previewName"></h2><div class="actions">
-        <a id="openOriginal" target="_blank" rel="noopener">打开原文件</a>
-        <a id="downloadFile" download>下载</a>
-        <button id="copyLink">复制链接</button>
-      </div></div>
+
+  <dialog id="previewDialog" class="preview-dialog">
+    <div class="preview-panel">
+      <button id="closeDialog" class="preview-close" aria-label="关闭">×</button>
+      <div class="preview-media"><img id="previewImage" alt="" /></div>
+      <div class="preview-meta">
+        <div class="preview-meta__top"><h2 id="previewName">文件名</h2><p id="previewPath" class="preview-path"></p></div>
+        <div class="preview-actions">
+          <a id="openOriginal" target="_blank" rel="noopener" class="btn btn--primary">打开原文件</a>
+          <a id="downloadFile" download class="btn btn--ghost-dark">下载文件</a>
+          <button id="copyLink" class="btn btn--ghost-dark">复制链接</button>
+        </div>
+      </div>
     </div>
   </dialog>
-  <script src="config.js?v=3"></script>
-  <script src="app.js?v=3"></script>
+
+  <script src="config.js?v=20260717-v4"></script>
+  <script src="app.js?v=20260717-v4"></script>
 </body>
 </html>

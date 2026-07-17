@@ -1,54 +1,59 @@
+
 (() => {
-  const cfg = window.IMAGE_LIBRARY_CONFIG;
+  const cfg = window.IMAGE_LIBRARY_CONFIG || {};
   const endpoint = `https://${cfg.bucket}.cos.${cfg.region}.myqcloud.com`;
-  let tree = { folders: {}, files: [] };
-  let pathParts = [];
-  const $ = s => document.querySelector(s);
-  const el = {title:$('#siteTitle'),grid:$('#grid'),status:$('#status'),back:$('#backBtn'),crumbs:$('#breadcrumbs'),search:$('#searchInput'),refresh:$('#refreshBtn'),dialog:$('#previewDialog'),previewImage:$('#previewImage'),previewName:$('#previewName'),openOriginal:$('#openOriginal'),downloadFile:$('#downloadFile'),copyLink:$('#copyLink'),closeDialog:$('#closeDialog')};
-  el.title.textContent = cfg.siteTitle; document.title = cfg.siteTitle;
-  const esc=v=>String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const encodeKey=k=>k.split('/').map(encodeURIComponent).join('/');
-  const urlFor=k=>`${endpoint}/${encodeKey(k)}`;
-  const isImage=n=>/\.(avif|bmp|gif|jpe?g|png|svg|webp)$/i.test(n);
-  const bytes=n=>{if(!n)return'';const u=['B','KB','MB','GB'];const i=Math.min(Math.floor(Math.log(n)/Math.log(1024)),3);return`${(n/1024**i).toFixed(i?1:0)} ${u[i]}`};
-
-  function buildTree(files){
-    const root={folders:{},files:[]};
-    for(const file of files){
-      const parts=file.key.split('/'); const name=parts.pop(); let node=root;
-      for(const part of parts){node.folders[part]??={folders:{},files:[]};node=node.folders[part];}
-      node.files.push({...file,name});
-    }
-    return root;
-  }
-  function node(){let n=tree;for(const p of pathParts)n=n.folders[p];return n;}
-  function count(n){let x=n.files.length;for(const c of Object.values(n.folders))x+=count(c);return x;}
-
-  async function load(){
-    if(!cfg.apiUrl || cfg.apiUrl.includes('PASTE_YOUR')){
-      el.status.className='status error';el.status.textContent='请先在 config.js 填入腾讯云 SCF 函数 URL。';return;
-    }
-    el.status.className='status';el.status.textContent='正在实时读取 COS…';el.grid.innerHTML='';
+  const $ = (s) => document.querySelector(s);
+  const el = {
+    siteTitle: $("#siteTitle"), heroDesc: $("#heroDesc"), heroFolders: $("#heroFolders"), heroFiles: $("#heroFiles"), heroPath: $("#heroPath"),
+    metricFolders: $("#metricFolders"), metricFiles: $("#metricFiles"), metricStatus: $("#metricStatus"),
+    grid: $("#grid"), status: $("#status"), back: $("#backBtn"), crumbs: $("#breadcrumbs"),
+    search: $("#searchInput"), refresh: $("#refreshBtn"), dialog: $("#previewDialog"),
+    previewImage: $("#previewImage"), previewName: $("#previewName"), previewPath: $("#previewPath"),
+    openOriginal: $("#openOriginal"), downloadFile: $("#downloadFile"), copyLink: $("#copyLink"), closeDialog: $("#closeDialog")
+  };
+  let rootNode = { folders: {}, files: [] }, pathParts = [];
+  const esc = (v) => String(v ?? "").replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const isImage = (name) => /\.(avif|bmp|gif|jpe?g|png|svg|webp)$/i.test(name || "");
+  const objectUrl = (key) => `${endpoint}/${key.split("/").map(encodeURIComponent).join("/")}`;
+  if (cfg.siteTitle) { el.siteTitle.textContent = cfg.siteTitle; document.title = cfg.siteTitle; }
+  function formatBytes(bytes){const value=Number(bytes||0); if(!value) return "未知大小"; const units=["B","KB","MB","GB","TB"]; const i=Math.min(Math.floor(Math.log(value)/Math.log(1024)),units.length-1); return `${(value/1024**i).toFixed(i?1:0)} ${units[i]}`;}
+  function currentNode(){let node=rootNode; for(const part of pathParts) node=node.folders[part]; return node;}
+  function countAllFiles(node){let total=(node.files||[]).length; for(const child of Object.values(node.folders||{})) total+=countAllFiles(child); return total;}
+  function buildTree(files){const root={folders:{},files:[]}; for(const file of files){const key=file.key||file.Key||""; if(!key||key.endsWith("/")) continue; const parts=key.split("/").filter(Boolean); const name=parts.pop(); let node=root; for(const part of parts){node.folders[part] ??= {folders:{},files:[]}; node=node.folders[part];} node.files.push({name,key,size:file.size||file.Size||0,lastModified:file.lastModified||file.LastModified||""});}
+    const sortNode=(node)=>{node.files.sort((a,b)=>a.name.localeCompare(b.name,undefined,{numeric:true})); node.folders=Object.fromEntries(Object.entries(node.folders).sort((a,b)=>a[0].localeCompare(b[0],undefined,{numeric:true}))); Object.values(node.folders).forEach(sortNode);}; sortNode(root); return root;}
+  async function loadData(){
+    if(!cfg.apiUrl){showError("config.js 中缺少 apiUrl，请先填写云函数 URL。"); return;}
+    setLoading("正在连接云函数并读取 COS 数据...");
     try{
-      const res=await fetch(`${cfg.apiUrl}${cfg.apiUrl.includes('?')?'&':'?'}t=${Date.now()}`);
-      const data=await res.json();
-      if(!res.ok)throw new Error(data.message||`接口返回 ${res.status}`);
-      tree=buildTree(data.files||[]);pathParts=[];el.search.value='';render();
-    }catch(e){el.status.className='status error';el.status.textContent=`读取失败：${e.message}`;el.grid.innerHTML='<div class="empty">请检查函数 URL、运行角色和函数 CORS。</div>';}
+      const response=await fetch(`${cfg.apiUrl}${cfg.apiUrl.includes("?")?"&":"?"}_t=${Date.now()}`);
+      if(!response.ok) throw new Error(`接口返回 ${response.status}`);
+      const data=await response.json();
+      const files=Array.isArray(data.files)?data.files:(Array.isArray(data.data)?data.data:[]);
+      rootNode=buildTree(files);
+      el.heroFolders.textContent=Object.keys(rootNode.folders).length;
+      el.heroFiles.textContent=countAllFiles(rootNode);
+      render(); setOk("实时目录加载成功");
+    }catch(error){console.error(error); showError(`实时读取失败：${error.message}`);}
   }
+  function setLoading(message){el.status.className="status glass status--loading"; el.status.textContent=message; el.metricStatus.textContent="加载中"; el.grid.innerHTML=skeletonHtml(8);}
+  function setOk(message){el.status.className="status glass status--ok"; el.status.textContent=message; el.metricStatus.textContent=message;}
+  function showError(message){el.status.className="status glass status--error"; el.status.textContent=message; el.metricStatus.textContent="失败"; el.grid.innerHTML=`<div class="empty-state"><div class="empty-state__emoji">⚠️</div><div>${esc(message)}</div></div>`;}
+  function skeletonHtml(n){return Array.from({length:n}).map(()=>`<article class="card is-visible"><div class="card__thumb" style="background:linear-gradient(90deg,#eff4fb 25%,#f8fbff 37%,#eff4fb 63%);background-size:400% 100%;animation:shimmer 1.4s infinite; height:175px;"></div><div class="card__body"><div style="height:14px;width:62%;border-radius:999px;background:#eef3fa;margin-bottom:10px;"></div><div style="height:12px;width:40%;border-radius:999px;background:#f3f6fb;"></div></div></article>`).join("")+`<style>@keyframes shimmer{0%{background-position:100% 0}100%{background-position:0 0}}</style>`;}
   function render(){
-    const n=node(),q=el.search.value.trim().toLowerCase();
-    const folders=Object.entries(n.folders).map(([name,v])=>({name,count:count(v)})).filter(x=>x.name.toLowerCase().includes(q));
-    const files=n.files.filter(x=>x.name.toLowerCase().includes(q));
-    crumbs();el.status.className='status';el.status.textContent=`当前目录：${folders.length} 个文件夹，${files.length} 个文件`;
-    const out=[];
-    for(const f of folders)out.push(`<article class="card"><button class="card-main" data-folder="${esc(f.name)}"><div class="thumb"><span class="folder-icon">📁</span></div><div class="card-info"><div class="card-name">${esc(f.name)}</div><div class="card-meta">${f.count} 个文件</div></div></button></article>`);
-    for(const f of files){const u=urlFor(f.key),thumb=isImage(f.name)?`<img loading="lazy" src="${u}" alt="${esc(f.name)}">`:`<span class="file-icon">📄</span>`;out.push(`<article class="card"><button class="card-main" data-key="${esc(f.key)}" data-name="${esc(f.name)}"><div class="thumb">${thumb}</div><div class="card-info"><div class="card-name">${esc(f.name)}</div><div class="card-meta">${bytes(f.size)}</div></div></button><div class="card-actions"><a href="${u}" target="_blank">打开</a><a href="${u}" download>下载</a></div></article>`)}
-    el.grid.innerHTML=out.length?out.join(''):'<div class="empty">这个目录是空的</div>';
-    el.grid.querySelectorAll('[data-folder]').forEach(b=>b.onclick=()=>{pathParts.push(b.dataset.folder);el.search.value='';render()});
-    el.grid.querySelectorAll('[data-key]').forEach(b=>b.onclick=()=>preview(b.dataset.key,b.dataset.name));
+    const node=currentNode(); const query=el.search.value.trim().toLowerCase();
+    const folders=Object.entries(node.folders||{}).map(([name,value])=>({name,count:countAllFiles(value)})).filter(item=>item.name.toLowerCase().includes(query));
+    const files=(node.files||[]).filter(item=>item.name.toLowerCase().includes(query));
+    renderBreadcrumbs(); updateMetrics(folders.length, files.length);
+    el.grid.innerHTML=[...folders.map(item=>folderCard(item)), ...files.map(item=>fileCard(item))].join("") || `<div class="empty-state"><div class="empty-state__emoji">🗂️</div><div style="font-size:18px;font-weight:700;color:#2f3c50;margin-bottom:8px;">这个目录是空的</div><div>你可以返回上一级，或者尝试搜索其它内容。</div></div>`;
+    bindGridEvents(); animateCards();
   }
-  function crumbs(){const a=[{name:'首页',i:-1},...pathParts.map((name,i)=>({name,i}))];el.crumbs.innerHTML=a.map((c,i)=>i===a.length-1?`<span>${esc(c.name)}</span>`:`<button data-i="${c.i}">${esc(c.name)}</button> <span>/</span>`).join(' ');el.crumbs.querySelectorAll('button').forEach(b=>b.onclick=()=>{const i=Number(b.dataset.i);pathParts=i<0?[]:pathParts.slice(0,i+1);el.search.value='';render()});el.back.disabled=!pathParts.length;}
-  function preview(key,name){const u=urlFor(key);el.previewName.textContent=name;el.openOriginal.href=u;el.downloadFile.href=u;el.downloadFile.download=name;if(isImage(name)){el.previewImage.src=u;el.previewImage.style.display=''}else{el.previewImage.removeAttribute('src');el.previewImage.style.display='none'}el.copyLink.onclick=async()=>{try{await navigator.clipboard.writeText(u);el.copyLink.textContent='已复制';setTimeout(()=>el.copyLink.textContent='复制链接',1200)}catch{prompt('复制链接：',u)}};el.dialog.showModal();}
-  el.search.oninput=render;el.refresh.onclick=load;el.back.onclick=()=>{pathParts.pop();el.search.value='';render()};el.closeDialog.onclick=()=>el.dialog.close();el.dialog.onclick=e=>{if(e.target===el.dialog)el.dialog.close()};load();
+  function updateMetrics(folderCount,fileCount){el.metricFolders.textContent=folderCount; el.metricFiles.textContent=fileCount; el.heroPath.textContent=pathParts.length?pathParts.join(" / "):"首页";}
+  function folderCard(item){return `<article class="card"><button class="card__button" data-folder="${esc(item.name)}"><div class="card__thumb"><span class="card__badge">Folder</span><div class="card__folder-icon">📁</div></div><div class="card__body"><h3 class="card__title">${esc(item.name)}</h3><div class="card__meta">${item.count} 个文件</div></div></button></article>`;}
+  function fileCard(item){const url=objectUrl(item.key); const thumb=isImage(item.name)?`<img loading="lazy" src="${url}" alt="${esc(item.name)}">`:`<div class="card__folder-icon" style="font-size:58px">📄</div>`; return `<article class="card"><button class="card__button" data-file="${esc(item.key)}" data-name="${esc(item.name)}"><div class="card__thumb"><span class="card__badge">${isImage(item.name)?"Image":"File"}</span>${thumb}</div><div class="card__body"><h3 class="card__title" title="${esc(item.name)}">${esc(item.name)}</h3><div class="card__meta">${formatBytes(item.size)}${item.lastModified?` · ${esc(item.lastModified).slice(0,10)}`:""}</div></div></button><div class="card__footer"><a class="quick-link" href="${url}" target="_blank" rel="noopener">打开</a><a class="quick-link" href="${url}" download>下载</a></div></article>`;}
+  function bindGridEvents(){el.grid.querySelectorAll("[data-folder]").forEach(btn=>btn.addEventListener("click",()=>{pathParts.push(btn.dataset.folder); el.search.value=""; render();})); el.grid.querySelectorAll("[data-file]").forEach(btn=>btn.addEventListener("click",()=>openPreview(btn.dataset.file, btn.dataset.name)));}
+  function animateCards(){const cards=[...el.grid.querySelectorAll(".card")]; requestAnimationFrame(()=>cards.forEach((card,index)=>setTimeout(()=>card.classList.add("is-visible"), Math.min(index*35,320))));}
+  function renderBreadcrumbs(){const crumbs=[{name:"首页", index:-1}, ...pathParts.map((name,index)=>({name,index}))]; el.crumbs.innerHTML=crumbs.map((crumb,i)=>i===crumbs.length-1?`<span>${esc(crumb.name)}</span>`:`<button data-index="${crumb.index}">${esc(crumb.name)}</button> <span>/</span>`).join(" "); el.crumbs.querySelectorAll("button").forEach(btn=>btn.addEventListener("click",()=>{const idx=Number(btn.dataset.index); pathParts=idx<0?[]:pathParts.slice(0, idx+1); el.search.value=""; render();})); el.back.disabled=pathParts.length===0;}
+  function openPreview(key,name){const url=objectUrl(key); el.previewName.textContent=name; el.previewPath.textContent=key; el.openOriginal.href=url; el.downloadFile.href=url; el.downloadFile.download=name; if(isImage(name)){el.previewImage.src=url; el.previewImage.style.display="";} else {el.previewImage.removeAttribute("src"); el.previewImage.style.display="none";} el.copyLink.onclick=async()=>{try{await navigator.clipboard.writeText(url); const old=el.copyLink.textContent; el.copyLink.textContent="已复制"; setTimeout(()=>el.copyLink.textContent=old,1200);}catch{prompt("复制下面的链接：",url);}}; el.dialog.showModal();}
+  el.search.addEventListener("input", render); el.refresh.addEventListener("click", loadData); el.back.addEventListener("click", ()=>{pathParts.pop(); el.search.value=""; render();}); el.closeDialog.addEventListener("click", ()=>el.dialog.close()); el.dialog.addEventListener("click", (e)=>{if(e.target===el.dialog) el.dialog.close();});
+  loadData();
 })();
