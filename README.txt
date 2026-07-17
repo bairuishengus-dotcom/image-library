@@ -1,1 +1,3 @@
-只需把 style.css 上传覆盖 GitHub 根目录中的 style.css。图片缩略图将使用 object-fit: contain，完整显示任何尺寸和比例的图片。
+V7.3 精修版：优化卡片间距、阴影、按钮、hover 动效、预览提示与整体细节。
+
+只需上传覆盖 GitHub 根目录中的 style.css。
